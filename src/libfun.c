@@ -112,10 +112,16 @@ void get_socket(char * ip) { // Get socket from ip
 
 
 void gettftp(char * host, char * file) {
+
     file = file; // tmp 
     void * addr = get_ip(host);
     char * str_addr = str_ip(addr);
     get_socket(str_addr);
+    struct tftp_rrq rrq_packet;
+    rrq_packet.opcode = htons(RRQ_OPCODE);
+    strcpy(rrq_packet.filename_and_mode, file);
+    sendto(sockfd, &rrq_packet, sizeof(uint16_t) + strlen(file) + 1, 0,
+           (struct sockaddr *)&str_addr, sizeof(str_addr));
     
 }
 
