@@ -2,11 +2,14 @@
 
 
 int main(int argc, char * argv[]) {
-    if(argc == 0) {
+    if(argc < 4) {
         print_error(NOT_ENOUGH_ARGS);
     }
+    if(argc > 4) {
+        print_error(TOO_MANY_ARGS);
+    }
 
-    if(strcmp(argv[1], "gettftp") == 0) {
+    if(strcmp(argv[1], "gettftp") == 0) { // Parsing from input args
         gettftp(argv[2], argv[3]);
     }
 

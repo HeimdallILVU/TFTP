@@ -1,6 +1,6 @@
 CC := gcc
 CFLAGS := -Wall -Wextra -I./include 
-LDFLAGS := 
+LDFLAGS :=
 
 SRC := main.c $(wildcard src/*.c)   # Add your source files here
 OBJ := $(SRC:.c=.o)
