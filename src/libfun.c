@@ -115,7 +115,7 @@ void gettftp(char * host, char * file) {
     file = file; // tmp 
     void * addr = get_ip(host);
     char * str_addr = str_ip(addr);
-    
+    get_socket(str_addr);
     
 }
 
