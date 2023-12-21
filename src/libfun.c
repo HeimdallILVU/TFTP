@@ -259,14 +259,7 @@ void receivePacket(int sockfd, char * ip) {
     while (1) {
         char dataPacket[TFTP_BLOCK_SIZE + 4]; // Opcode (2 bytes) + Block Number (2 bytes) + DATA
 
-        // Server details
-        struct sockaddr_in serverAddr;
-        memset(&serverAddr, 0, sizeof(serverAddr));
-        serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(atoi(PORT)); // TFTP port
-        inet_pton(AF_INET, ip, &(serverAddr.sin_addr));
-
-        ssize_t bytesRead = recvfrom(sockfd, dataPacket, sizeof(dataPacket), 0, (struct sockaddr *) &serverAddr, (socklen_t *) sizeof(serverAddr));
+        ssize_t bytesRead = recv(sockfd, dataPacket, sizeof(dataPacket), 0);
         if (bytesRead == -1) {
             perror("Error receiving data packet");
             close(sockfd);
