@@ -193,6 +193,17 @@ void sendTFTPWriteRequest(const char *filename, int sockfd) {
 }
 
 void sendTFTPData(char * data, int block_number, int sockfd) {
+
+    // Get the bound port number
+    struct sockaddr_in bound_addr;
+    socklen_t addr_len = sizeof(bound_addr);
+    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
+        perror("getsockname");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+
     // Prepare the RRQ packet
     char rrqPacket[516]; // Max size for a TFTP packet
     memset(rrqPacket, 0, sizeof(rrqPacket));
@@ -226,6 +237,16 @@ void sendTFTPData(char * data, int block_number, int sockfd) {
 }
 
 void sendTFTPAck(int block_number, int sockfd) {
+    // Get the bound port number
+    struct sockaddr_in bound_addr;
+    socklen_t addr_len = sizeof(bound_addr);
+    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
+        perror("getsockname");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+
     // Prepare the RRQ packet
     char rrqPacket[516]; // Max size for a TFTP packet
     memset(rrqPacket, 0, sizeof(rrqPacket));
@@ -251,7 +272,16 @@ void sendTFTPAck(int block_number, int sockfd) {
     if (DEBUG) print_message(MESSAGE_SUCCESS_ACK);
 }
 
-void receivePacket(int sockfd) {
+void receivePacket(int sockfd, char * filename) {
+    // Get the bound port number
+    struct sockaddr_in bound_addr;
+    socklen_t addr_len = sizeof(bound_addr);
+    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
+        perror("getsockname");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
     // Receive and save the file
     int blockNumber = 1;
 
@@ -263,6 +293,8 @@ void receivePacket(int sockfd) {
 
 
     if (DEBUG) print_message("start waiting receive\n");
+
+    int filefd = open(filename, O_CREAT | O_WRONLY);
 
     while (1) {
         char dataPacket[TFTP_BLOCK_SIZE + 4]; // Opcode (2 bytes) + Block Number (2 bytes) + DATA
@@ -282,7 +314,7 @@ void receivePacket(int sockfd) {
 
         if (opcode == TFTP_OPCODE_DATA && receivedBlockNumber == blockNumber) {
             // Write data to the file using write and file descriptor
-            int bytesWritten = write(STDOUT_FILENO, &dataPacket[4], bytesRead - 4);
+            int bytesWritten = write(filefd, &dataPacket[4], bytesRead - 4);
 
             if (bytesWritten == -1) {
                 print_error(WRITE_ERROR);
@@ -307,6 +339,15 @@ void receivePacket(int sockfd) {
 }
 
 int receiveTFTPAckWRQ(int sockfd) {
+    // Get the bound port number
+    struct sockaddr_in bound_addr;
+    socklen_t addr_len = sizeof(bound_addr);
+    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
+        perror("getsockname");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
     char ackPacket[4]; // Opcode (2 bytes) + Block Number (2 bytes)
     ssize_t bytesRead = recv(sockfd, ackPacket, sizeof(ackPacket), 0);
     if (bytesRead == -1) {
@@ -332,6 +373,15 @@ int receiveTFTPAckWRQ(int sockfd) {
 }
 
 int receiveTFTPAckPacket(int sockfd) {
+    // Get the bound port number
+    struct sockaddr_in bound_addr;
+    socklen_t addr_len = sizeof(bound_addr);
+    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
+        perror("getsockname");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
     char ackPacket[4]; // Opcode (2 bytes) + Block Number (2 bytes)
     ssize_t bytesRead = recv(sockfd, ackPacket, sizeof(ackPacket), 0);
     if (bytesRead == -1) {
@@ -357,6 +407,14 @@ int receiveTFTPAckPacket(int sockfd) {
 }
 
 void writePacket(int sockfd, char * filename) {
+    // Get the bound port number
+    struct sockaddr_in bound_addr;
+    socklen_t addr_len = sizeof(bound_addr);
+    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
+        perror("getsockname");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
     // Open the file for reading
     int filefd = open(filename, O_RDONLY);
     if (!filefd) {
@@ -426,7 +484,7 @@ void gettftp(char * host, char * file) {
     if (DEBUG) print_message("Connected\n");
 
     sendTFTPReadRequest(file, sockfd);
-    receivePacket(sockfd);
+    receivePacket(sockfd, file);
 
 
     close(sockfd); 
