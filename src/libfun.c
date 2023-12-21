@@ -109,6 +109,24 @@ int get_socket(char * ip) { // Get socket from ip
 
 }
 
+void bind_socket_dyn(int sockfd) {
+    // Get the bound port number
+    struct sockaddr_in bound_addr;
+    socklen_t addr_len = sizeof(bound_addr);
+    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
+        perror("getsockname");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    bound_addr.sin_port = htons(atoi("0"));
+        if (bind(sockfd, (struct sockaddr*)&bound_addr, sizeof(bound_addr)) == -1) {
+        perror("bind");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+}
+ 
 void print_raw_byte(char * packet, int packetSize) {
     // Print the rrqPacket as hexadecimal values
     for (int i = 0; i < packetSize; ++i) {
@@ -194,14 +212,7 @@ void sendTFTPWriteRequest(const char *filename, int sockfd) {
 
 void sendTFTPData(char * data, int block_number, int sockfd) {
 
-    // Get the bound port number
-    struct sockaddr_in bound_addr;
-    socklen_t addr_len = sizeof(bound_addr);
-    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
-        perror("getsockname");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
+    bind_socket_dyn(sockfd);
 
 
     // Prepare the RRQ packet
@@ -237,14 +248,7 @@ void sendTFTPData(char * data, int block_number, int sockfd) {
 }
 
 void sendTFTPAck(int block_number, int sockfd) {
-    // Get the bound port number
-    struct sockaddr_in bound_addr;
-    socklen_t addr_len = sizeof(bound_addr);
-    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
-        perror("getsockname");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
+    bind_socket_dyn(sockfd);
 
 
     // Prepare the RRQ packet
@@ -273,14 +277,7 @@ void sendTFTPAck(int block_number, int sockfd) {
 }
 
 void receivePacket(int sockfd, char * filename) {
-    // Get the bound port number
-    struct sockaddr_in bound_addr;
-    socklen_t addr_len = sizeof(bound_addr);
-    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
-        perror("getsockname");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
+    bind_socket_dyn(sockfd);
 
     // Receive and save the file
     int blockNumber = 1;
@@ -339,14 +336,7 @@ void receivePacket(int sockfd, char * filename) {
 }
 
 int receiveTFTPAckWRQ(int sockfd) {
-    // Get the bound port number
-    struct sockaddr_in bound_addr;
-    socklen_t addr_len = sizeof(bound_addr);
-    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
-        perror("getsockname");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
+    bind_socket_dyn(sockfd);
 
     char ackPacket[4]; // Opcode (2 bytes) + Block Number (2 bytes)
     ssize_t bytesRead = recv(sockfd, ackPacket, sizeof(ackPacket), 0);
@@ -373,14 +363,7 @@ int receiveTFTPAckWRQ(int sockfd) {
 }
 
 int receiveTFTPAckPacket(int sockfd) {
-    // Get the bound port number
-    struct sockaddr_in bound_addr;
-    socklen_t addr_len = sizeof(bound_addr);
-    if (getsockname(sockfd, (struct sockaddr*)&bound_addr, &addr_len) == -1) {
-        perror("getsockname");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
+    bind_socket_dyn(sockfd);
 
     char ackPacket[4]; // Opcode (2 bytes) + Block Number (2 bytes)
     ssize_t bytesRead = recv(sockfd, ackPacket, sizeof(ackPacket), 0);
