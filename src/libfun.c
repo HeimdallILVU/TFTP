@@ -256,6 +256,7 @@ void receivePacket(int sockfd, char * ip) {
     // Receive and save the file
     int blockNumber = 1;
     print_message("start waiting receive\n");
+
     while (1) {
         char dataPacket[TFTP_BLOCK_SIZE + 4]; // Opcode (2 bytes) + Block Number (2 bytes) + DATA
 
@@ -265,6 +266,8 @@ void receivePacket(int sockfd, char * ip) {
             close(sockfd);
             exit(EXIT_FAILURE);
         }
+
+
 
         print_message("message");
 
@@ -306,8 +309,10 @@ void gettftp(char * host, char * file) {
     int sockfd = get_socket(str_addr);
 
     if (DEBUG) print_message("Connected\n");
+
     sendTFTPReadRequest(file, sockfd);
     receivePacket(sockfd, str_addr);
+
 
     close(sockfd); 
       
