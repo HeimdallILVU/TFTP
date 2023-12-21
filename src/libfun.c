@@ -120,7 +120,7 @@ void bind_socket_dyn(int sockfd) {
     }
 
     bound_addr.sin_port = htons(atoi("0"));
-        if (bind(sockfd, (struct sockaddr*)&bound_addr, sizeof(bound_addr)) == -1) {
+        if (connect(sockfd, (struct sockaddr*)&bound_addr, sizeof(bound_addr)) == -1) {
         perror("bind");
         close(sockfd);
         exit(EXIT_FAILURE);
