@@ -8,6 +8,7 @@
 #define SOCKET_CREATE_ERROR "Error Creating socket"
 #define IP_INVALID_ERROR "Invalid IP address"
 #define ERROR_SENDING_PACKET "Error sending packet"
+#define RECEIVE_ERROR "Error receiving data packet"
 #define MESSAGE_SUCCESS_READ_REQUEST "Read request packet sent successfully.\n"
 #define MESSAGE_SUCCESS_WRITE_REQUEST "Write request packet sent successfully.\n"
 #define MESSAGE_SUCCESS_DATA "Data packet sent successfully.\n"
@@ -15,12 +16,15 @@
 #define READ_REQUEST "\x00\x01heimdall.txt\x00netascii\x00"
 #define PORT "69"
 
+
 #define TFTP_OPCODE_RRQ_READ 1
 #define TFTP_OPCODE_RRQ_WRITE 2
 #define TFTP_OPCODE_DATA 3
 #define TFTP_OPCODE_ACK 4
 #define TFTP_BLOCK_SIZE 512
 #define TFTP_MODE "netascii"
+
+#define MAX_OUTPUT_SIZE 512
 
 void print_message(char * message);
 void print_error(char * error);

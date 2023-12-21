@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <fcntl.h>
 
@@ -69,7 +70,7 @@ char * get_ip(char * host) { // Get ip from host url
 
         char message[500]; // tmp print
         sprintf(message, "IP Address of TFTP : %s\n", ipstr);
-        print_message(message);
+        if (DEBUG) print_message(message);
 
         freeaddrinfo(serverinfo);
         return addr;
@@ -118,8 +119,6 @@ void print_raw_byte(char * packet, int packetSize) {
 
     printf("\n");
 }
-
-
 
 void sendTFTPReadRequest(const char *filename, int sockfd) {
     // Prepare the RRQ packet
@@ -252,24 +251,30 @@ void sendTFTPAck(int block_number, int sockfd) {
     if (DEBUG) print_message(MESSAGE_SUCCESS_ACK);
 }
 
-void receivePacket(int sockfd, char * ip) {
+void receivePacket(int sockfd) {
     // Receive and save the file
     int blockNumber = 1;
-    print_message("start waiting receive\n");
+
+    struct sockaddr_in server_addr;
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(atoi(PORT)); 
+
+
+    if (DEBUG) print_message("start waiting receive\n");
 
     while (1) {
         char dataPacket[TFTP_BLOCK_SIZE + 4]; // Opcode (2 bytes) + Block Number (2 bytes) + DATA
 
         ssize_t bytesRead = recv(sockfd, dataPacket, sizeof(dataPacket), 0);
         if (bytesRead == -1) {
-            perror("Error receiving data packet");
+            print_error(RECEIVE_ERROR);
             close(sockfd);
             exit(EXIT_FAILURE);
         }
 
-
-
-        print_message("message");
+        if (DEBUG) print_message("message");
 
         // Extract Opcode and Block Number
         int opcode = (dataPacket[0] << 8) | dataPacket[1];
@@ -301,6 +306,116 @@ void receivePacket(int sockfd, char * ip) {
     }
 }
 
+int receiveTFTPAckWRQ(int sockfd) {
+    char ackPacket[4]; // Opcode (2 bytes) + Block Number (2 bytes)
+    ssize_t bytesRead = recv(sockfd, ackPacket, sizeof(ackPacket), 0);
+    if (bytesRead == -1) {
+        print_error("Error receiving ACK packet");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Extract Opcode and Block Number
+    int opcode = (ackPacket[0] << 8) | ackPacket[1];
+    int receivedBlockNumber = (ackPacket[2] << 8) | ackPacket[3];
+
+    if (opcode == TFTP_OPCODE_ACK) {
+        char message[MAX_OUTPUT_SIZE];
+        sprintf(message, "ACK packet received for block number %d.\n", receivedBlockNumber);
+        print_message(message);
+        return receivedBlockNumber;
+    } else {
+        print_message("Error: Unexpected packet received.\n");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+}
+
+int receiveTFTPAckPacket(int sockfd) {
+    char ackPacket[4]; // Opcode (2 bytes) + Block Number (2 bytes)
+    ssize_t bytesRead = recv(sockfd, ackPacket, sizeof(ackPacket), 0);
+    if (bytesRead == -1) {
+        print_error("Error receiving ACK packet");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Extract Opcode and Block Number
+    int opcode = (ackPacket[0] << 8) | ackPacket[1];
+    int receivedBlockNumber = (ackPacket[2] << 8) | ackPacket[3];
+
+    if (opcode == TFTP_OPCODE_ACK) {
+        char message[MAX_OUTPUT_SIZE];
+        sprintf(message, "ACK packet received for block number %d.\n", receivedBlockNumber);
+        print_message(message);
+        return receivedBlockNumber;
+    } else {
+        print_message("Error: Unexpected packet received.\n");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void writePacket(int sockfd, char * filename) {
+    // Open the file for reading
+    int filefd = open(filename, O_RDONLY);
+    if (!filefd) {
+        print_error("Error opening file for reading");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Send file data in DATA packets
+    int blockNumber = 1;
+    while (1) {
+        char dataPacket[TFTP_BLOCK_SIZE + 4]; // Opcode (2 bytes) + Block Number (2 bytes) + DATA
+        dataPacket[0] = (TFTP_OPCODE_DATA >> 8) & 0xFF;
+        dataPacket[1] = TFTP_OPCODE_DATA & 0xFF;
+
+        // Block Number
+        dataPacket[2] = (blockNumber >> 8) & 0xFF;
+        dataPacket[3] = blockNumber & 0xFF;
+
+        // Read data from the file
+        size_t bytesRead = read(filefd, &dataPacket[4], TFTP_BLOCK_SIZE);
+        print_message("test\n");
+        write(STDOUT_FILENO, dataPacket, bytesRead + 4);
+        print_message("test\n");
+
+        // Send the DATA packet
+        ssize_t bytesSent = send(sockfd, dataPacket, bytesRead + 4, 0);
+        if (bytesSent == -1) {
+            print_error("Error sending DATA packet");
+            close(filefd);
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+
+        // Receive ACK for the sent block
+        int receivedBlockNumber = receiveTFTPAckPacket(sockfd);
+
+        if (receivedBlockNumber == blockNumber) {
+            // Increment block number for the next iteration
+            blockNumber++;
+
+            // Check if the last block has been sent
+            if (bytesRead < TFTP_BLOCK_SIZE) {
+                break;
+            }
+        } else {
+            // Handle error (e.g., retransmit or abort)
+            print_message("Error: Unexpected ACK received.\n");
+            close(filefd);
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    print_message("File sent successfully.\n");
+
+    // Close the file
+    close(filefd);
+}
 
 void gettftp(char * host, char * file) {
     file = file; // tmp 
@@ -311,7 +426,7 @@ void gettftp(char * host, char * file) {
     if (DEBUG) print_message("Connected\n");
 
     sendTFTPReadRequest(file, sockfd);
-    receivePacket(sockfd, str_addr);
+    receivePacket(sockfd);
 
 
     close(sockfd); 
@@ -319,7 +434,19 @@ void gettftp(char * host, char * file) {
 }
  
 void puttftp(char * host, char * file) {
-    host = host; // tmp
-    file = file; // tmp
-    if (DEBUG) print_message("puttftp test \n");
+    file = file; // tmp 
+    void * addr = get_ip(host);
+    char * str_addr = str_ip(addr);
+    int sockfd = get_socket(str_addr);
+
+    if (DEBUG) print_message("Connected\n");
+
+    sendTFTPWriteRequest(file, sockfd);
+
+    receiveTFTPAckWRQ(sockfd);
+
+    writePacket(sockfd, file);
+
+
+    close(sockfd); 
 } 
